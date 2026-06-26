@@ -47,3 +47,5 @@ def analyze_resume(resume_text, job_description):
         contents=prompt,
     )
     return response.text
+
+print("Resume Analyzer Module Loaded")
