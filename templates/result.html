@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Analysis Evaluation Results</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; margin: 0; padding: 40px; color: #334155; }
+        .container { max-width: 900px; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin: 0 auto; }
+        h1, h2, h3 { color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+        .badge { display: inline-block; padding: 6px 14px; margin: 4px; border-radius: 20px; font-size: 14px; font-weight: 600; }
+        .match-badge { background-color: #d1fae5; color: #065f46; border: 1px solid #34d399; }
+        .miss-badge { background-color: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
+        .btn { display: inline-block; padding: 12px 24px; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 15px; border: none; cursor: pointer; transition: background 0.2s; }
+        table { width:100%; border-collapse:collapse; background: white; margin-top:15px; margin-bottom: 30px; }
+        th, td { border: 1px solid #cbd5e1; padding: 12px; text-align: left; }
+        th { background-color: #f1f5f9; }
+        .gauge-box { display: flex; align-items: center; gap: 30px; background: #f1f5f9; padding: 20px; border-radius: 8px; margin-bottom: 25px; }
+        .svg-gauge { width: 120px; height: 120px; transform: rotate(-90deg); }
+        .gauge-bg { fill: none; stroke: #e2e8f0; stroke-width: 3.8; }
+        .gauge-fill { fill: none; stroke: #007BFF; stroke-width: 3.8; stroke-dasharray: 100, 100; transition: stroke-dasharray 0.5s ease-in-out; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        {% if is_multiple %}
+            <h1> Candidate Analysis Leaderboard</h1>
+            <p>Multiple resumes evaluated against job requirements. Ranked highest to lowest match capability:</p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Candidate File</th>
+                        <th>Match Score</th>
+                        <th>Individual Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for res in results %}
+                    <tr {% if loop.index == 1 %}style="background-color: #f0fdf4;"{% endif %}>
+                        <td><strong>#{{ loop.index }}</strong></td>
+                        <td>{{ res.filename }}</td>
+                        <td style="font-weight: bold; color: #007BFF;">{{ res.score_str }}</td>
+                        <td>
+                            <a href="/download_single_batch/{{ res.filename }}" style="color: #28a745; font-weight: bold; text-decoration: none;">📥 Download PDF</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <h2> Resume Comparison</h2>
+            <div style="width: 100%; max-width: 600px; margin: 0 auto 40px auto;">
+                <canvas id="multiMatchChart"></canvas>
+            </div>
+
+            <script>
+                const ctx = document.getElementById('multiMatchChart').getContext('2d');
+                const rawLabels = "{% for res in results %}{{ res.filename }}|{% endfor %}";
+                const rawData = "{% for res in results %}{{ res.score_num }}|{% endfor %}";
+                const chartLabels = rawLabels.split('|').filter(Boolean);
+                const chartData = rawData.split('|').filter(Boolean).map(Number);
+                const backgroundColors = chartData.map(() => '#007BFF');
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [{
+                            label: 'Match Score (%)',
+                            data: chartData,
+                            backgroundColor: backgroundColors,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        scales: { y: { beginAtZero: true, max: 100 } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            </script>
+
+        {% else %}
+            {% set res = results[0] %}
+            <h1> Resume Match Analysis Report</h1>
+            <p><strong>Evaluated Document:</strong> {{ res.filename }}</p>
+
+            <div class="gauge-box">
+                <svg viewBox="0 0 36 36" class="svg-gauge">
+                    <path class="gauge-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path class="gauge-fill" stroke-dasharray="{{ res.score_num }}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                </svg>
+                <div>
+                    <h2 style="margin:0; font-size:32px; color:#007BFF; border:none;">{{ res.score_str }}</h2>
+                    <p style="margin:4px 0 0 0; color:#64748b;">Automated Evaluation Match Score</p>
+                </div>
+            </div>
+
+            <h3> Core Summary</h3>
+            <p style="line-height: 1.6; font-style: italic;">{{ res.summary }}</p>
+
+            <h3>✅ Identified Skillsets (Matched Keywords)</h3>
+            <div>
+                {% for match in res.matches %}
+                    <span class="badge match-badge">{{ match }}</span>
+                {% else %}
+                    <p style="color: gray;">No direct matching keywords detected.</p>
+                {% endfor %}
+            </div>
+
+            <h3> Gap Areas (Missing Critical Keywords)</h3>
+            <div style="margin-bottom: 25px;">
+                {% for miss in res.misses %}
+                    <span class="badge miss-badge">{{ miss }}</span>
+                {% else %}
+                    <p style="color: green; font-weight: bold;">Incredible! Zero targeted skill gaps detected.</p>
+                {% endfor %}
+            </div>
+
+            <h3> Improvement Suggestions</h3>
+            <ul>
+                {% for suggestion in res.suggestions %}
+                    <li>
+                        {% if ':' in suggestion %}
+                            <strong>{{ suggestion.split(':', 1)[0] }}:</strong>{{ suggestion.split(':', 1)[1] }}
+                        {% else %}
+                            {{ suggestion }}
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <br>
+        <div style="display: flex; gap: 15px;">
+            <a href="/" class="btn" style="background-color: #007BFF;">← Return to Dashboard</a>
+            
+            {% if is_multiple %}
+                <a href="/download_consolidated" class="btn" style="background-color: #28a745;"> Download Comparitive Analysis Report (PDF)</a>
+            {% else %}
+                <a href="/download_single_batch/{{ results[0].filename }}" class="btn" style="background-color: #28a745;"> Download Detailed Report (PDF)</a>
+            {% endif %}
+        </div>
+    </div>
+
+</body>
+</html>

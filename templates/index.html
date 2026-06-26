@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Resume Matcher Dashboard</title>
+</head>
+<body style="font-family: Arial, sans-serif; margin: 40px; max-width: 900px;">
+    <h1>AI Resume Analyzer & Job Matcher</h1>
+    <p>Upload a resume and paste a job description to see your AI matching score!</p>
+    <hr>
+    
+    <form action="/analyze" method="POST" enctype="multipart/form-data">
+        <h3>1. Upload Resume (PDF)</h3>
+        <input type="file" name="resume" accept=".pdf" multiple required>
+        
+        <h3>2. Paste Job Description</h3>
+        <textarea name="job_description" rows="8" cols="80" placeholder="Paste the job requirements here... Tip: Write the Job Title on the very first line!" required></textarea>
+        
+        <br><br>
+        <button type="submit" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #28a745; color: white; border: none; border-radius: 4px;">Analyze Resume</button>
+    </form>
+
+    <br><br>
+    <hr>
+    
+    <h2 style="margin-top: 40px;"> History Log</h2>
+    <table border="1" cellpadding="10" cellspacing="0" style="width:100%; border-collapse:collapse; background: white;">
+        <thead>
+            <tr style="background-color: #f1f5f9;">
+                <th>File Name</th>
+                <th>Target Job Role</th>
+                <th>Match Score</th>
+                <th>Timestamp</th>
+                <th>Download Report</th>
+                <th>Delete Data</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if history %}
+                {% for row in history %}
+                <tr>
+                    <td>{{ row[1] }}</td>
+                    <td>{{ row[2] }}</td>
+                    <td style="font-weight: bold; color: #007BFF;">{{ row[3] }}</td>
+                    <td style="color: #666; font-size: 13px;">{{ row[4] }}</td>
+                    <td style="text-align: center;">
+                        <a href="/download_past/{{ row[0] }}" style="color: #28a745; text-decoration: none; font-weight: bold;">📥 Download PDF</a>
+                    </td>
+                    <td style="text-align: center;">
+                        <a href="/delete_record/{{ row[0] }}" onclick="return confirm('Are you sure you want to completely delete this entry?');" style="color: #dc3545; text-decoration: none; font-weight: bold;">❌ Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="6" style="text-align: center; color: gray;">No analysis records found. Upload a resume above to start logging history!</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+</body>
+</html>
